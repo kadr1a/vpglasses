@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: vpglasses_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vpglasses
+      POSTGRES_USER: vpglasses
+      POSTGRES_PASSWORD: vpglasses
+    ports:
+      - "5433:5432"
+    volumes:
+      - vpglasses_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vpglasses -d vpglasses"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://vpglasses:vpglasses@postgres:5432/vpglasses?schema=public
+      JWT_SECRET: change-this-secret-before-production
+      PORT: 3001
+      CLIENT_URL: http://localhost:8080
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  vpglasses_data:

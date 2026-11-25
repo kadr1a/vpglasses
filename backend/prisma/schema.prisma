@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  client
+}
+
+enum OrderStatus {
+  processing
+  shipped
+  delivered
+  cancelled
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  email     String     @unique
+  password  String
+  name      String
+  phone     String?
+  role      Role       @default(client)
+  createdAt DateTime   @default(now())
+
+  orders    Order[]
+  favorites Favorite[]
+  cartItems CartItem[]
+}
+
+model Frame {
+  id          Int      @id @default(autoincrement())
+  brand       String
+  name        String
+  description String?
+  price       Float
+  material    String   // пластик | металл | титан | комбинированный
+  shape       String   // круглая | квадратная | овальная | кошачий глаз | авиатор
+  color       String
+  imageUrl    String?
+  isPopular   Boolean  @default(false)
+
+  // размеры
+  lensWidth   Float?
+  lensHeight  Float?
+  bridge      Float?
+  templeLength Float?
+
+  createdAt   DateTime @default(now())
+
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+  favorites  Favorite[]
+}
+
+model LensBrand {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  orderItems OrderItem[]
+}
+
+model LensType {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  orderItems OrderItem[]
+}
+
+model LensThickness {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique
+  orderItems OrderItem[]
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  userId          Int
+  user            User        @relation(fields: [userId], references: [id])
+  total           Float
+  status          OrderStatus @default(processing)
+  customerName    String
+  phone           String
+  deliveryAddress String
+  createdAt       DateTime    @default(now())
+
+  items OrderItem[]
+}
+
+model OrderItem {
+  id              Int            @id @default(autoincrement())
+  orderId         Int
+  frameId         Int?
+  lensBrandId     Int?
+  lensTypeId      Int?
+  lensThicknessId Int?
+  prescriptionData Json?
+  priceAtTime     Float
+  quantity        Int            @default(1)
+
+  order         Order          @relation(fields: [orderId], references: [id])
+  frame         Frame?         @relation(fields: [frameId], references: [id])
+  lensBrand     LensBrand?     @relation(fields: [lensBrandId], references: [id])
+  lensType      LensType?      @relation(fields: [lensTypeId], references: [id])
+  lensThickness LensThickness? @relation(fields: [lensThicknessId], references: [id])
+}
+
+model Favorite {
+  id      Int   @id @default(autoincrement())
+  userId  Int
+  frameId Int
+  user    User  @relation(fields: [userId], references: [id])
+  frame   Frame @relation(fields: [frameId], references: [id])
+
+  @@unique([userId, frameId])
+}
+
+model CartItem {
+  id         Int    @id @default(autoincrement())
+  userId     Int
+  frameId    Int?
+  lensConfig Json?
+  quantity   Int    @default(1)
+
+  user  User   @relation(fields: [userId], references: [id])
+  frame Frame? @relation(fields: [frameId], references: [id])
+}
